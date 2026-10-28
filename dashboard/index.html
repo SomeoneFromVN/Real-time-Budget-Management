@@ -1,0 +1,211 @@
+<!doctype html>
+<html lang="vi">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="color-scheme" content="dark">
+  <meta name="theme-color" content="#121212">
+  <title>Sổ chi · Lịch chi tiêu</title>
+  <script src="/helpers.js"></script>
+  <script src="/app.js"></script>
+  <link rel="stylesheet" href="/app.css">
+</head>
+<body>
+  <a class="skip-link" href="#main">Đến nội dung chính</a>
+  <div class="app-shell">
+    <main id="main" class="main-content">
+      <header class="page-heading">
+        <div>
+          <h1>Sổ chi tiêu</h1>
+        </div>
+        <div class="heading-actions">
+          <form id="edit-unlock" class="edit-unlock" hidden><label for="edit-key">Mã chỉnh sửa<input id="edit-key" type="password" autocomplete="off" maxlength="200"></label><button id="edit-unlock-submit" class="button button-outline" type="submit">Mở khóa</button></form><button id="edit-lock" class="button button-outline" type="button" hidden>Khóa lại</button>
+          <div class="sync-status"><span id="sync-badge" class="sync-badge state-unknown" role="status">Đồng bộ: Chưa rõ</span><span id="last-read" class="last-read">Chưa có mốc đồng bộ ngân hàng</span></div>
+          <button id="theme-toggle" class="button button-outline" type="button" aria-label="Giao diện tối; hiện tại Sáng" aria-pressed="false" title="Chuyển sang giao diện tối">
+            <svg class="theme-sun" viewBox="0 0 20 20" aria-hidden="true" focusable="false"><circle cx="10" cy="10" r="3.5"/><path d="M10 1v2M10 17v2M1 10h2M17 10h2M3.6 3.6 5 5M15 15l1.4 1.4M3.6 16.4 5 15M15 5l1.4-1.4"/></svg>
+            <svg class="theme-moon" viewBox="0 0 20 20" aria-hidden="true" focusable="false"><path d="M17 11.5A7.5 7.5 0 0 1 8.5 3 7.5 7.5 0 1 0 17 11.5Z"/></svg>
+            <span id="theme-label">Sáng</span>
+          </button>
+          <button id="refresh" class="button button-outline" type="button">
+            <svg viewBox="0 0 20 20" aria-hidden="true" focusable="false"><path d="M15.8 7A6 6 0 1 0 16 12M16 3v4h-4"/></svg>
+            Cập nhật
+          </button>
+        </div>
+      </header>
+      <p id="edit-message" class="summary-note" role="status"></p>
+      <p id="refresh-feedback" class="refresh-feedback" role="status" aria-atomic="true"></p>
+
+      <section id="today-card" class="today-panel" aria-labelledby="today-heading" aria-busy="true">
+        <header class="today-heading"><h2 id="today-heading">Hôm nay</h2><div class="today-actions"><p id="today-date" class="section-kicker">Đang đọc ngày hiện tại</p><button id="today-transactions" class="button button-outline" type="button" aria-controls="day-detail" aria-expanded="false" disabled>Xem khoản chi</button></div></header>
+        <dl class="today-figures">
+          <div><dt>Đã chi</dt><dd id="today-spent">—</dd></div>
+          <div><dt>Ngân sách dự kiến ngày</dt><dd id="today-budget">—</dd></div>
+          <div><dt>Còn lại</dt><dd id="today-remaining">—</dd></div>
+          <div><dt>Tiền vào hôm nay</dt><dd id="today-income">—</dd></div>
+        </dl>
+        <p id="today-message" class="summary-note" aria-live="polite">Đang tải hôm nay…</p>
+      </section>
+
+      <div id="error-banner" class="error-banner" role="alert" hidden>
+        <strong>Chưa cập nhật đủ dữ liệu</strong>
+        <p id="error-message"></p>
+      </div>
+      <div class="data-notice" id="history-notice" role="status" hidden>
+        <span class="notice-mark" aria-hidden="true">i</span>
+        <p><strong>Chi tiêu đã ghi nhận, không phải toàn bộ lịch sử ngân hàng.</strong><span id="history-description"></span></p>
+      </div>
+
+      <section id="month-insights" class="month-insights" aria-labelledby="month-insights-title">
+        <header class="month-heading">
+          <h2 id="month-insights-title">Tổng hợp tháng đang xem</h2>
+          <div class="calendar-controls">
+            <label class="month-picker"><span class="visually-hidden">Tháng đang xem</span><input id="month-input" type="month" min="0001-01" max="9998-12"></label>
+            <div class="calendar-navigation">
+              <button id="previous-month" class="icon-button" type="button" aria-label="Tháng trước"><svg viewBox="0 0 20 20" aria-hidden="true" focusable="false"><path d="m12 5-5 5 5 5"/></svg></button>
+              <button id="today" class="today-button" type="button">Hôm nay</button>
+              <button id="next-month" class="icon-button" type="button" aria-label="Tháng sau"><svg viewBox="0 0 20 20" aria-hidden="true" focusable="false"><path d="m8 5 5 5-5 5"/></svg></button>
+            </div>
+          </div>
+        </header>
+        <div class="metrics-primary">
+          <article class="insight-item insight-featured"><p class="summary-label">CÒN LẠI TRONG THÁNG</p><p id="month-budget-remaining" class="insight-value">—</p></article>
+          <article class="insight-item insight-featured"><p class="summary-label">CÓ THỂ CHI / NGÀY</p><p id="month-daily-available" class="insight-value">—</p><p id="month-daily-note" class="summary-note" hidden></p></article>
+          <article class="insight-item"><p class="summary-label">CHI ĐÃ GHI NHẬN</p><p id="month-spent" class="insight-value">—</p><p id="month-transactions" class="summary-note"></p></article>
+        </div>
+        <div class="metrics-secondary">
+          <article class="insight-item"><p id="month-budget-label" class="summary-label">Ngân sách tháng (dự kiến)</p><p id="month-budget" class="insight-value">—</p><p id="month-budget-note" class="summary-note" hidden></p></article>
+          <article class="insight-item"><p class="summary-label">NGÀY CHI NHIỀU NHẤT</p><p id="month-highest" class="insight-value">—</p><p id="month-highest-note" class="summary-note" hidden></p></article>
+          <article class="insight-item"><p class="summary-label">Tiền vào tháng</p><p id="month-income" class="insight-value">—</p></article>
+        </div>
+        <p id="month-actual-note" class="summary-note" hidden></p>
+      </section>
+
+      <div id="analysis-row" class="analysis-row">
+        <section id="cumulative" class="chart-panel" aria-labelledby="cumulative-heading">
+          <header class="chart-heading"><div><h2 id="cumulative-heading">Chi và ngân sách tích lũy</h2><p id="chart-total-date" class="chart-total-date">—</p></div></header>
+          <p id="chart-message" class="summary-note" hidden></p>
+          <div id="cumulative-chart" class="chart-canvas"></div>
+          <details id="chart-details"><summary>Xem số tiền chính xác theo ngày</summary><div class="chart-table-wrap" role="region" aria-label="Bảng số tiền tích lũy theo ngày" tabindex="0"><table class="chart-table"><caption>Tích lũy từ đầu tháng đến ngày đang tính</caption><thead><tr><th scope="col">Ngày</th><th scope="col">Chi đã ghi</th><th scope="col">Ngân sách tích lũy</th></tr></thead><tbody id="cumulative-table"></tbody></table></div></details>
+        </section>
+        <section id="comparison" class="comparison-panel" aria-labelledby="comparison-heading" aria-busy="true">
+          <div><h2 id="comparison-heading">So sánh tháng trước</h2><p id="comparison-range" class="summary-note">Đang đọc kỳ so sánh.</p></div>
+          <div class="comparison-figures"><p id="comparison-difference" class="comparison-value">—</p><p id="comparison-percent" class="summary-note">Chưa có mốc so sánh.</p></div>
+          <p id="comparison-message" class="summary-note" aria-live="polite" hidden></p>
+        </section>
+      </div>
+
+      <section id="categories" class="chart-panel" aria-labelledby="categories-heading" aria-busy="false">
+        <h2 id="categories-heading">Chi theo phân loại</h2>
+        <p id="categories-message" class="summary-note" role="status">Đang đọc chi theo phân loại…</p>
+        <div class="chart-table-wrap" role="region" aria-label="Bảng chi theo phân loại" tabindex="0">
+          <table id="categories-table" class="chart-table" hidden>
+            <caption class="visually-hidden">Chi theo phân loại trong tháng đang xem</caption>
+            <thead><tr><th scope="col">Phân loại</th><th scope="col">Số khoản</th><th scope="col">Số tiền</th><th scope="col">Tỷ trọng</th></tr></thead>
+            <tbody id="categories-body"></tbody>
+          </table>
+        </div>
+      </section>
+
+      <details id="transaction-search" class="search-panel">
+        <summary id="search-heading">Tìm và lọc khoản chi</summary>
+        <p id="search-hint" class="summary-note">Tìm trong toàn bộ sổ đã ghi nhận, không chỉ tháng đang xem. Ngày tính theo UTC+07:00; nhập VND bằng chữ số, không dấu phân cách.</p>
+        <form id="search-form" class="search-form" role="search" aria-labelledby="search-heading" aria-describedby="search-hint">
+          <label class="search-query" for="search-q">Ghi chú<input id="search-q" name="q" type="search" maxlength="200" autocomplete="off" placeholder="Ví dụ: cà phê"></label>
+          <label for="search-start">Từ ngày<input id="search-start" name="start" type="date" min="0001-01-01" max="9998-12-31"></label>
+          <label for="search-end">Đến ngày<input id="search-end" name="end" type="date" min="0001-01-01" max="9998-12-31"></label>
+          <label for="search-min">Tối thiểu (VND)<input id="search-min" name="min" type="text" inputmode="numeric" pattern="[0-9]{1,19}" maxlength="19" aria-describedby="search-hint" autocomplete="off"></label>
+          <label for="search-max">Tối đa (VND)<input id="search-max" name="max" type="text" inputmode="numeric" pattern="[0-9]{1,19}" maxlength="19" aria-describedby="search-hint" autocomplete="off"></label>
+          <label for="search-sort">Thứ tự<select id="search-sort" name="sort"><option value="latest">Mới nhất</option><option value="amount">Lớn nhất</option></select></label>
+          <label for="search-label">Nhãn<input id="search-label" name="label" maxlength="40" autocomplete="off"></label>
+          <label for="search-category">Phân loại<input id="search-category" name="category" maxlength="40" autocomplete="off" placeholder="Ví dụ: Chưa phân loại"></label>
+          <div class="search-actions"><button id="search-submit" class="button button-outline" type="submit">Tìm khoản chi</button><button id="search-clear" class="button button-outline" type="button">Xóa lọc</button></div>
+        </form>
+        <p id="search-message" class="summary-note" role="status" aria-atomic="true"></p>
+        <p id="search-error" class="search-error" role="alert" hidden></p>
+        <section id="search-results-panel" aria-labelledby="search-results-title" aria-busy="false" hidden>
+          <h3 id="search-results-title" tabindex="-1">Kết quả lọc khoản chi</h3>
+          <p id="search-summary" class="summary-note"></p>
+          <p id="search-coverage" class="summary-note"></p>
+          <dl class="search-totals"><div><dt>Khoản khớp</dt><dd id="search-count">—</dd></div><div><dt>Tổng kết quả lọc</dt><dd id="search-total">—</dd></div></dl>
+          <p class="summary-note">Tổng tất cả khoản khớp, không chỉ trang đang hiển thị. Không thay đổi tổng ngày hoặc tổng tháng.</p>
+          <ul id="search-results" class="search-results" aria-label="Khoản chi khớp bộ lọc"></ul>
+          <button id="search-more" class="button button-outline load-more" type="button" hidden>Xem thêm kết quả</button>
+        </section>
+      </details>
+
+      <div class="calendar-layout">
+        <section id="calendar" class="calendar-panel" aria-labelledby="calendar-title">
+          <header class="calendar-toolbar">
+            <div class="calendar-title-group">
+              <h2 id="calendar-title">Lịch tháng</h2>
+              <p id="calendar-year" class="calendar-year">Chọn ngày để xem khoản chi</p>
+            </div>
+          </header>
+          <p id="calendar-message" class="section-message" aria-live="polite">Đang đọc lịch chi tiêu…</p>
+          <p id="calendar-scroll-hint" class="calendar-scroll-hint">Cuộn ngang khi cần; chọn ngày để xem khoản chi.</p>
+          <div class="calendar-scroll" role="region" aria-label="Lịch chi tiêu theo ngày" aria-describedby="calendar-scroll-hint" tabindex="0">
+            <div class="weekdays" aria-hidden="true"><span>T2</span><span>T3</span><span>T4</span><span>T5</span><span>T6</span><span>T7</span><span>CN</span></div>
+            <div id="calendar-days" class="calendar-days" role="group" aria-label="Các ngày trong tháng" aria-busy="true"></div>
+          </div>
+          <footer class="calendar-legend">
+            <span><i class="legend-dot within" aria-hidden="true"></i>Ngày có khoản chi</span>
+            <span><span class="day-over">Vượt</span>Chi lớn hơn ngân sách</span>
+            <span><span class="money-out" aria-hidden="true">−</span>Chi</span>
+            <span><span class="money-in" aria-hidden="true">+</span>Tiền vào</span>
+          </footer>
+        </section>
+
+        <aside id="day-detail" class="day-panel" aria-labelledby="day-title" aria-busy="true" hidden>
+          <header class="day-heading">
+            <h2 id="day-title" tabindex="-1">Một ngày trong sổ</h2>
+            <p id="day-weekday" class="day-weekday">Chọn ngày trên lịch</p>
+          </header>
+          <div class="day-total-block">
+            <span>Chi đã ghi nhận</span>
+            <strong id="day-spent">—</strong>
+          </div>
+          <div class="day-total-block day-income-block">
+            <span>Tiền vào</span>
+            <strong id="day-income-total">—</strong>
+          </div>
+          <dl class="day-budget">
+            <div><dt id="day-budget-label">Ngân sách dự kiến ngày</dt><dd id="day-budget">—</dd></div>
+          </dl>
+          <p id="day-budget-note" class="day-note" hidden></p>
+          <div class="transactions-heading"><h3>Khoản chi</h3><span id="transaction-count">—</span></div>
+          <div class="transaction-sort" role="group" aria-label="Thứ tự khoản chi">
+            <button id="sort-latest" class="button button-outline" type="button" aria-pressed="true" aria-controls="transactions">Mới nhất</button>
+            <button id="sort-amount" class="button button-outline" type="button" aria-pressed="false" aria-controls="transactions">Lớn nhất</button>
+          </div>
+          <div class="day-messages">
+            <p id="day-order-note" class="day-message" hidden>Chưa có giờ; xếp theo số tiền giảm dần.</p>
+            <p id="day-message" class="day-message" aria-live="polite">Đang tải khoản chi…</p>
+            <p id="day-time-note" class="day-message" hidden>Một số khoản cũ chưa có giờ.</p>
+          </div>
+          <form id="label-editor" class="label-editor" hidden><h3 id="label-editor-title" tabindex="-1">Gán nhãn</h3><label for="label-input">Nhãn<input id="label-input" maxlength="40" list="label-options" autocomplete="off"></label><datalist id="label-options"></datalist><div class="label-editor-actions"><button type="submit" class="button button-outline">Lưu</button><button id="label-clear" type="button" class="button button-outline">Xóa nhãn</button><button id="label-cancel" type="button" class="button button-outline">Đóng</button></div></form>
+          <ul id="transactions" class="transactions" role="list" aria-label="Khoản chi trong ngày"></ul>
+          <button id="load-more" class="button button-outline load-more" type="button" hidden>Xem thêm khoản chi</button>
+          <section id="day-income" class="day-income" aria-labelledby="day-income-heading">
+            <div class="transactions-heading"><h3 id="day-income-heading">Tiền vào</h3><span id="day-income-count">—</span></div>
+            <p id="day-income-message" class="day-message" hidden></p>
+            <ul id="day-income-list" class="transactions" role="list" aria-label="Tiền vào trong ngày"></ul>
+          </section>
+        </aside>
+      </div>
+
+      <details id="operations" class="operations-panel">
+        <summary id="operations-title">Chi tiết kỹ thuật</summary>
+        <p class="panel-note">Ngày tính theo UTC+07:00. Dashboard chỉ đổi nhãn khi bật chỉnh sửa; không chạy đồng bộ ngân hàng.</p>
+        <p id="status-message" class="section-message" aria-live="polite">Đang đọc trạng thái…</p>
+        <div class="operations-overview">
+          <article class="operational-item"><h3>Đồng bộ gần nhất</h3><p id="sync-outcome" class="operational-value">—</p><dl><div><dt>Thử gần nhất</dt><dd id="sync-attempt">—</dd></div><div><dt>Thành công gần nhất</dt><dd id="sync-success">—</dd></div><div><dt>Lỗi liên tiếp</dt><dd id="sync-failures">—</dd></div><div><dt>Mã lỗi cuối</dt><dd id="sync-error">—</dd></div></dl></article>
+          <article class="operational-item"><h3>Hàng đợi thông báo</h3><div class="outbox-counts"><div><strong id="outbox-pending">—</strong><span>Đang chờ</span></div><div><strong id="outbox-delivered">—</strong><span>Đã gửi</span></div><div><strong id="outbox-quarantined">—</strong><span>Cách ly</span></div></div><p class="operational-note">Bark lỗi có thể giữ sự kiện trong hàng đợi. Dashboard không gửi thông báo.</p></article>
+          <article class="operational-item"><h3>Snapshot mới nhất</h3><p id="backup-state" class="operational-value">—</p><p id="backup-date" class="backup-date">Chưa đọc ngày sao lưu</p><p class="operational-note">Bản sao lưu không được mã hóa. Backup chứa nội dung giao dịch. Nội dung có thể gồm tên người nhận và số tài khoản; không chia sẻ tệp DB hoặc backup.</p></article>
+        </div>
+        <div id="step-statuses" class="step-statuses" aria-label="Kết quả sáu bước xử lý"></div>
+      </details>
+      <noscript><p class="error-banner">Bật JavaScript để xem khoản chi.</p></noscript>
+    </main>
+  </div>
+</body>
+</html>

@@ -1,0 +1,49 @@
+# Local environment
+.env
+.env.*
+!.env.example
+
+# Local SQLite databases and journal files
+*.db*
+*.sqlite*
+
+# Local backups
+/backups/
+
+# Local runtime logs
+/logs/
+
+# Runtime lock and process artifacts
+*.lock
+*.lck
+*.pid
+
+# Python caches and virtual environments
+__pycache__/
+*.py[cod]
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+.venv/
+venv/
+env/
+tests/
+.impeccable/
+.claude/
+
+# Internal working notes, not part of the project
+IMPLEMENTATION_PLAN.md
+
+# Editor, OS and tool files
+.vscode/
+.idea/
+.DS_Store
+Thumbs.db
+desktop.ini
+*.swp
+*.orig
+*.bak
+
+# Node and test output
+node_modules/
+coverage/
